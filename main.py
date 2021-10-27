@@ -9,9 +9,13 @@ from flask_login import UserMixin, login_user, LoginManager, login_required, cur
 from forms import CreatePostForm, RegistrationForm, LoginForm, CommentForm
 from flask_gravatar import Gravatar
 from functools import wraps
+import os
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 ckeditor = CKEditor(app)
 Bootstrap(app)
 
@@ -218,14 +222,16 @@ def delete_post(post_id):
 
 
 @app.route("/delete-comment/<int:comment_id>")
-@admin_required
 def delete_comment(comment_id):
     comment_to_delete = Comment.query.get(comment_id)
     if comment_to_delete:
-        post = comment_to_delete.post
-        db.session.delete(comment_to_delete)
-        db.session.commit()
-        return redirect(url_for('show_post', post_id=post.id))
+        if current_user.is_authenticated and current_user.id in [1, comment_to_delete.author.id]:
+            post = comment_to_delete.post
+            db.session.delete(comment_to_delete)
+            db.session.commit()
+            return redirect(url_for('show_post', post_id=post.id))
+        else:
+            abort(403)
     else:
         abort(404)
 
